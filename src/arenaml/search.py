@@ -70,6 +70,10 @@ class ArenaSearch:
             fraction of the remaining budget.
         penalize_failures: score crashed or timed-out fits at the dummy level so the surrogate
             learns to avoid them; otherwise they are just skipped.
+        clip_at_dummy: treat scores worse than the dummy predictor as dummy level (both in the
+            benchmark features and in target observations); a model worse than a constant
+            prediction is not more informative than one at that level, and clipping keeps the
+            cold-start uncertainty of erratic families (e.g. KNN) sane.
         refit_full: after the search, refit the best configuration on all rows.
         num_cpus, num_gpus: resources for AutoGluon (``None`` = AutoGluon's default).
         output_dir: folder for AutoGluon predictor files (default ``./arenaml_runs``).
@@ -96,6 +100,7 @@ class ArenaSearch:
         min_eval_time: float = 5.0,
         budget_margin: float = 1.0,
         penalize_failures: bool = True,
+        clip_at_dummy: bool = True,
         refit_full: bool = False,
         num_cpus: int | None = None,
         num_gpus: int | None = None,
@@ -123,6 +128,7 @@ class ArenaSearch:
         self.min_eval_time = min_eval_time
         self.budget_margin = budget_margin
         self.penalize_failures = penalize_failures
+        self.clip_at_dummy = clip_at_dummy
         self.refit_full = refit_full
         self.num_cpus = num_cpus
         self.num_gpus = num_gpus
@@ -173,7 +179,10 @@ class ArenaSearch:
         tasks = lb.task_names
         if self.source_tasks == "same_type":
             tasks = [t for t in tasks if lb.tasks.loc[t, "problem_type"] == self.problem_type_]
-        perf = lb.normalized_performance().loc[candidates, tasks].fillna(DUMMY_LEVEL).to_numpy()
+        perf = lb.normalized_performance().loc[candidates, tasks].fillna(DUMMY_LEVEL)
+        if self.clip_at_dummy:
+            perf = perf.clip(lower=DUMMY_LEVEL)
+        perf = perf.to_numpy()
         cost = lb.cost.loc[candidates, tasks].to_numpy()
         return Optimizer(
             names=candidates,
@@ -280,6 +289,8 @@ class ArenaSearch:
             step += 1
             if result.ok:
                 perf = float(normalize_error(result.metric_error_val, self.dummy_error_))
+                if self.clip_at_dummy:
+                    perf = max(perf, DUMMY_LEVEL)
                 self.optimizer_.observe(suggestion.index, perf, result.seconds)
             else:
                 perf = DUMMY_LEVEL

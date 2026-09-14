@@ -38,7 +38,8 @@ configuration on the leaderboard. What differs from standard HPO is the surrogat
   divided by the error of a constant dummy predictor on the same task and negated, so all
   tasks and task types are higher-is-better and on a comparable scale, and `-1` always means
   "dummy level". The same dummy error is computed on the target dataset from its labels, so
-  observed scores land on the same scale. TabArena's own leaderboard rescaling uses the best
+  observed scores land on the same scale. Scores worse than the dummy predictor are clipped to
+  the dummy level (`clip_at_dummy=True`). TabArena's own leaderboard rescaling uses the best
   score per task, which is not available during a search, and is only used for reporting.
 * **Applicability.** Models are excluded when they have no genuine benchmark results for the
   target's problem type (e.g. TabICL on regression; TabArena's imputed rows are ignored), when
