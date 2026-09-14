@@ -130,6 +130,21 @@ res.metric_error_val, res.seconds, res.predictor
   on an RTX 5060; the other GPU families additionally need their extras (`tabpfn`, `tabicl`,
   `pytabkit`, ...) and were not run.
 
+## Examples
+
+```bash
+uv pip install -e ".[examples]"
+python examples/quickstart.py             # minimal one-liner search
+python examples/credit_g_history.py        # 5-minute search + trajectory/regret/calibration PNG
+python examples/plot_weight_history.py      # interactive HTML: weight per benchmark task vs. step
+```
+
+The last two read/write `examples/output/`: `credit_g_history.csv` (one row per evaluation) and
+`credit_g_weight_history.csv` (one row per evaluation, with a `perf:<task>` and `cost:<task>`
+column per TabArena task, from `search.weight_history_`) are plain CSVs for your own analysis;
+`credit_g_weight_history.html` is a self-contained interactive line chart of those weights against
+the evaluation step, open it directly in a browser.
+
 ## Development
 
 ```bash

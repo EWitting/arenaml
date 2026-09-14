@@ -19,6 +19,8 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["pytest>=8", "ruff>=0.5"]
+# Only needed to run the scripts under examples/ (plots), not the library itself.
+examples = ["matplotlib>=3.7", "plotly>=5.0"]
 
 [build-system]
 requires = ["setuptools>=68"]
