@@ -153,6 +153,7 @@ class ArenaSearch:
         self.best_error_: float = float("nan")
         self.best_result_: EvalResult | None = None
         self.elapsed_: float = 0.0
+        self.weight_history_: pd.DataFrame = pd.DataFrame()
 
     # ------------------------------------------------------------------ setup helpers
     def _log(self, msg: str, *args) -> None:
@@ -242,6 +243,7 @@ class ArenaSearch:
 
         self.optimizer_ = self._build_optimizer(lb, self.candidates_)
         rows: list[dict] = []
+        weight_rows: list[dict] = []
         self.best_config_, self.best_error_, self.best_result_ = None, float("nan"), None
         step = 0
         while True:
@@ -326,6 +328,7 @@ class ArenaSearch:
                     "is_best": is_best,
                 }
             )
+            weight_rows.append(self._weight_row(step, name))
             self.history_ = pd.DataFrame(rows, columns=_HISTORY_COLUMNS)
             if result.ok:
                 self._log(
@@ -339,6 +342,7 @@ class ArenaSearch:
                 self._log("    failed in %.0fs: %s", result.seconds, result.error)
 
         self.history_ = pd.DataFrame(rows, columns=_HISTORY_COLUMNS)
+        self.weight_history_ = pd.DataFrame(weight_rows)
         if self.best_result_ is None:
             raise RuntimeError("No configuration finished successfully within the budget")
         if self.refit_full and self.best_result_.predictor is not None:
@@ -381,6 +385,22 @@ class ArenaSearch:
         table["pred_error"] = -table["pred_mean"] * self.dummy_error_
         table["method"] = self.leaderboard_.configs.loc[table.index, "method"].values
         return table
+
+    def _source_task_names(self) -> list[str]:
+        tasks = self.leaderboard_.task_names
+        if self.source_tasks == "same_type":
+            tasks = [t for t in tasks if self.leaderboard_.tasks.loc[t, "problem_type"] == self.problem_type_]
+        return tasks
+
+    def _weight_row(self, step: int, config: str) -> dict:
+        """One long-format row per (step, surrogate, task) flattened into a wide dict."""
+        row: dict[str, Any] = {"step": step, "config": config, "perf_fitted": self.optimizer_.perf.is_fitted}
+        tasks = self._source_task_names()
+        row.update({f"perf:{t}": w for t, w in zip(tasks, self.optimizer_.perf.weights, strict=True)})
+        if self.optimizer_.cost is not None:
+            row["cost_fitted"] = self.optimizer_.cost.is_fitted
+            row.update({f"cost:{t}": w for t, w in zip(tasks, self.optimizer_.cost.weights, strict=True)})
+        return row
 
     def task_weights(self) -> pd.DataFrame:
         """Learned weight per TabArena task for the performance and runtime surrogates."""
