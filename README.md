@@ -119,6 +119,8 @@ res.metric_error_val, res.seconds, res.predictor
   (`score_column="val"` switches to the out-of-fold validation error). If you pass a custom
   `eval_metric`, the target is optimised for it while the benchmark columns stay on
   TabArena's metric; the linear surrogate only needs the two to be monotonically related.
+* The problem type is inferred with AutoGluon's rules when not given; pass
+  `problem_type="multiclass"` explicitly for integer-coded classes to avoid a regression fit.
 * Failed or timed-out fits are scored at the dummy level (`penalize_failures=True`) so the
   surrogate steers away from similar configurations.
 * Ensembling several configurations is out of scope for now.
