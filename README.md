@@ -125,8 +125,10 @@ res.metric_error_val, res.seconds, res.predictor
 * Failed or timed-out fits are scored at the dummy level (`penalize_failures=True`) so the
   surrogate steers away from similar configurations.
 * Ensembling several configurations is out of scope for now.
-* GPU model families were not exercised end-to-end in the test suite (no CUDA build of torch
-  in the development environment); the CPU families were.
+* GPU families need a CUDA build of torch (e.g. `uv pip install --index-url
+  https://download.pytorch.org/whl/cu130 "torch==2.13.0+cu130"`). TabM_GPU was verified end-to-end
+  on an RTX 5060; the other GPU families additionally need their extras (`tabpfn`, `tabicl`,
+  `pytabkit`, ...) and were not run.
 
 ## Development
 
