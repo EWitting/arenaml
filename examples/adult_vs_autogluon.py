@@ -272,21 +272,29 @@ def plot(results: pd.DataFrame, dummy_err: float) -> None:
             sub["budget_s"], sub["test_regret"], "o-", color=colors[method], label=method, linewidth=2, ms=6
         )
     ax.axhline(0.0, color=MUTED, linewidth=1, linestyle="--")
+    # Anchored top-left (empty whitespace above the leftmost points), not on the axhline
+    # itself, since a method's regret can sit right at/near 0 for most of the budget range
+    # and would otherwise collide with this label.
     ax.text(
-        df["budget_s"].max(),
-        0.0,
-        "  best test error observed in this experiment (shared reference)",
+        0.02,
+        0.95,
+        "- - -  best test error observed in this experiment (shared reference)",
         color=MUTED,
         fontsize=8,
-        va="bottom",
-        ha="right",
+        va="top",
+        ha="left",
+        transform=ax.transAxes,
     )
     ax.set_ylabel("test regret (test error - best observed)", color=MUTED)
     ax.set_title("Regret vs. budget (same reference for both curves)", color=INK, fontsize=11, loc="left")
 
+    protocol = {
+        "matched": f"AutoGluon matched to arenaml's protocol: holdout_frac={HOLDOUT_FRAC}, no ensembling",
+        "defaults": "AutoGluon's own defaults: automatic validation split, ensembling enabled",
+        "extreme": "AutoGluon extreme_quality preset: multi-layer stacking + zeroshot portfolio",
+    }[AUTOGLUON_MODE]
     fig.suptitle(
-        f"arenaml vs. plain AutoGluon on {DATASET} (not a TabArena task), "
-        f"holdout_frac={HOLDOUT_FRAC}, no ensembling",
+        f"arenaml vs. AutoGluon on {DATASET} (not a TabArena task) -- {protocol}",
         color=INK,
         fontsize=12,
         x=0.01,
