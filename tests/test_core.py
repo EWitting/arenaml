@@ -6,7 +6,9 @@ import numpy as np
 import pandas as pd
 import pytest
 
+import arenaml  # noqa: F401 -- import itself must trigger the warm-up, see the test below
 from arenaml.acquisition import cost_cooled, expected_improvement
+from arenaml.applicability import gpu_available
 from arenaml.evaluate import CVStrategy, prepare_hyperparameters
 from arenaml.normalization import (
     DUMMY_LEVEL,
@@ -175,6 +177,18 @@ def test_optimizer_never_repeats_and_handles_no_cost():
 
 
 # ---------------------------------------------------------------------------- evaluation helpers
+
+
+def test_import_arenaml_warms_gpu_available():
+    # `import arenaml` (already done at module load, above) must have made this a cache hit:
+    # a caller's first ArenaSearch.fit() should never pay gpu_available()'s own first-call
+    # cost (torch's import plus its first torch.cuda.is_available()), several seconds on a
+    # cold process -- see the module docstring of arenaml.applicability.warm_up.
+    info = gpu_available.cache_info()
+    assert info.currsize == 1  # populated exactly once, regardless of hits below
+    gpu_available()
+    gpu_available()
+    assert gpu_available.cache_info().hits >= info.hits + 2
 
 
 def test_cv_strategy_validation_and_counts():

@@ -11,9 +11,20 @@ of predicted cost selects the next configuration to run.
 
 from __future__ import annotations
 
+from arenaml.applicability import warm_up as _warm_up
 from arenaml.evaluate import CVStrategy, EvalResult, run_config
 from arenaml.leaderboard import Leaderboard, load_leaderboard
 from arenaml.search import ArenaSearch, search
+
+# ArenaSearch.fit() (via applicability()) does several first-touch imports on its own the
+# first time it runs -- torch (DLL loading, custom-op registration, CUDA device detection)
+# and tabarena's own model-constraints/registry lookups (which pull in tabarena's full
+# dependency chain: seaborn, plotly, autorank, ...) -- together several seconds' worth of
+# work that would otherwise silently come out of whichever search runs first's own
+# time_budget. Paying it here instead, at import time, is exactly what warm_up() is for; see
+# its docstring for the full breakdown. Safe to call unconditionally: every step it runs is
+# cached and swallows its own import/driver errors.
+_warm_up()
 
 __all__ = [
     "ArenaSearch",

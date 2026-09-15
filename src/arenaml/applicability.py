@@ -43,7 +43,15 @@ class TargetProfile:
     n_train_per_fold: int
 
 
+@cache
 def gpu_available() -> bool:
+    """Whether CUDA is available, memoised: ``torch``'s own import (DLL loading, custom-op
+    registration) plus the first ``torch.cuda.is_available()`` call together cost several
+    seconds on a cold process (subsequent calls are microseconds -- torch caches the CUDA
+    init internally), so without this ``@cache`` a caller's first ``ArenaSearch.fit()`` would
+    silently pay that cost out of its own ``time_budget``. ``arenaml``'s import warms this on
+    purpose (see ``arenaml/__init__.py``) so it lands at import time instead.
+    """
     try:
         import torch
 
@@ -73,6 +81,24 @@ def _registry_by_class_name() -> dict:
     except Exception as exc:  # pragma: no cover
         log.warning("Could not load the TabArena model registry: %s", exc)
         return {}
+
+
+@cache
+def _tabarena_model_registry():
+    """AutoGluon-keyed registry ``resolve_model_cls`` resolves against (empty if unavailable).
+
+    Building it does real work beyond ``_registry_by_class_name()``'s own registry lookup
+    (``tabarena.benchmark.exec_models.registry``'s PEP 562 lazy singleton additionally
+    deep-copies AutoGluon's own model registry and merges TabArena's models into it), so it
+    is warmed separately rather than assumed to come along for free.
+    """
+    try:
+        from tabarena.benchmark.exec_models import registry
+
+        return registry.tabarena_model_registry
+    except Exception as exc:  # pragma: no cover
+        log.warning("Could not build the TabArena AutoGluon model registry: %s", exc)
+        return None
 
 
 _SPEC_SPLIT = re.compile(r"[\s@\[<>=!~;]")
@@ -120,13 +146,35 @@ def resolve_model_cls(model_cls_name: str, ag_key: str | None = None):
 
     # Pass the registry explicitly: the module builds it lazily via PEP 562 ``__getattr__``,
     # which does not cover the bare-name lookup inside ``infer_model_cls`` itself.
-    model_register = registry.tabarena_model_registry
+    model_register = _tabarena_model_registry()
     try:
         return registry.infer_model_cls(model_cls_name, model_register=model_register)
     except AssertionError:
         if ag_key and ag_key in model_register.key_to_cls_map():
             return model_register.key_to_cls(key=ag_key)
         raise
+
+
+def warm_up() -> None:
+    """Pay every lazy-import/detection cost this module defers, right now.
+
+    ``applicability()`` (and so every ``ArenaSearch.fit()``) calls :func:`gpu_available`,
+    :func:`_model_constraints`, :func:`_registry_by_class_name`, and (indirectly, once a
+    concrete config needs resolving) :func:`_tabarena_model_registry` for the first time --
+    each imports a real chunk of ``torch`` and/or ``tabarena`` (which pulls in its own base
+    dependencies: seaborn, plotly, autorank, ...) that a cold process has not touched yet,
+    together several seconds' worth of work. Left lazy, whichever ``ArenaSearch.fit()`` call
+    happens to run first pays that cost out of its own ``time_budget``. ``arenaml`` calls this
+    once at package import time (see ``arenaml/__init__.py``) so it is paid there instead.
+
+    Safe to call unconditionally and repeatedly: every step is ``@cache``d and swallows its
+    own errors, so a second call (or calling this in an environment without torch/tabarena)
+    is cheap and never raises.
+    """
+    gpu_available()
+    _model_constraints()
+    _registry_by_class_name()
+    _tabarena_model_registry()
 
 
 def _size_ok(ag_key: str, target: TargetProfile) -> bool:

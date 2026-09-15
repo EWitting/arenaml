@@ -129,6 +129,10 @@ res.metric_error_val, res.seconds, res.predictor
 * Failed or timed-out fits are scored at the dummy level (`penalize_failures=True`) so the
   surrogate steers away from similar configurations.
 * Ensembling several configurations is out of scope for now.
+* `import arenaml` takes several seconds (torch's own import plus a first CUDA check, and
+  tabarena's own dependency chain, e.g. seaborn/plotly/autorank) -- deliberately: it is paid
+  once at import time rather than out of the first `ArenaSearch.fit()` call's own
+  `time_budget`, which is where it would otherwise land.
 * GPU families need a CUDA build of torch (e.g. `uv pip install --index-url
   https://download.pytorch.org/whl/cu130 "torch==2.13.0+cu130"`). TabM_GPU was verified end-to-end
   on an RTX 5060; the other GPU families additionally need their extras (`tabpfn`, `tabicl`,
