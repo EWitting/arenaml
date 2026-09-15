@@ -11,3 +11,4 @@ arenaml_runs/
 *.log
 .DS_Store
 examples/output/runs/
+examples/output/adult_runs/
