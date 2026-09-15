@@ -78,9 +78,11 @@ PROBLEM_TYPE = "binary"
 EVAL_METRIC = "roc_auc"
 HOLDOUT_FRAC = 0.2
 TEST_FRAC = 0.2
-BUDGETS = [60, 180, 480]  # seconds; log-ish spacing. 60s floor: applicability()/optimizer
-# construction alone costs arenaml several seconds against a 2000+-candidate pool, so smaller
-# budgets would mostly measure that fixed overhead rather than search quality.
+BUDGETS = [15, 30, 60, 120, 240, 300]  # seconds; log-ish spacing, capped at 300s (both
+# methods were already plateauing/overfitting past that on this dataset). A 15s floor is
+# meaningful now that arenaml's own applicability()/registry setup is warmed at
+# `import arenaml` time rather than paid out of the first search's own budget (see
+# arenaml.applicability.warm_up) -- it used to cost several seconds by itself.
 SEED = 0
 
 # "matched": AutoGluon is forced onto arenaml's own protocol (single holdout, no ensembling)
@@ -91,7 +93,18 @@ SEED = 0
 #   This answers a different question ("plain AutoGluon usage" vs. arenaml) rather than
 #   isolating the search strategy -- ensembling and a possibly different validation split are
 #   then real, expected advantages of AutoGluon, not confounds to control away.
-AUTOGLUON_MODE = "matched"  # "matched" | "defaults"
+# "extreme": AutoGluon.fit(train_data, time_limit=budget, presets="extreme_quality") --
+#   AutoGluon's strongest preset, multi-layer stacking plus its "zeroshot_2025_12_18_gpu"
+#   portfolio (TabDPT, TabICL, Mitra, TabM, GBM, CatBoost, RealTabPFN-v2; confirmed via
+#   autogluon.tabular.configs.presets_configs.tabular_presets_dict["extreme_quality"] ->
+#   hyperparameters="zeroshot_2025_12_18_gpu"). The explicit time_limit overrides the
+#   preset's own default (AutoGluon's own fit() docstring: "Any user-specified arguments in
+#   fit() will override the values used by presets."). Needs optional extras this
+#   environment does not have installed (tabicl, tabdpt, tabpfn, ...); AutoGluon skips a
+#   model it cannot fit rather than failing the whole run, so without those extras this
+#   silently degrades toward a smaller (GBM/CAT-only) stacked ensemble -- install the extras
+#   first if you actually want the foundation models exercised.
+AUTOGLUON_MODE = "defaults"  # "matched" | "defaults" | "extreme"
 
 # Which TabArena leaderboard configs arenaml may draw from. "cpu" (default) matches what
 # AutoGluon's own default recipe considers: checked empirically in this environment via
@@ -190,8 +203,12 @@ def run_autogluon(budget: int, X_train, y_train, X_test, y_test) -> dict:
             fit_weighted_ensemble=False,  # arenaml never ensembles either; keep it single-model
             calibrate=False,
         )
+    elif AUTOGLUON_MODE == "extreme":
+        fit_kwargs["presets"] = "extreme_quality"  # time_limit above still wins, see module docstring
     elif AUTOGLUON_MODE != "defaults":
-        raise ValueError(f"Unknown AUTOGLUON_MODE {AUTOGLUON_MODE!r}; expected 'matched' or 'defaults'")
+        raise ValueError(
+            f"Unknown AUTOGLUON_MODE {AUTOGLUON_MODE!r}; expected 'matched', 'defaults' or 'extreme'"
+        )
     # else "defaults": nothing added -- AutoGluon's own out-of-the-box behaviour.
 
     t0 = time.perf_counter()
