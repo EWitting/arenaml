@@ -40,7 +40,8 @@ class Optimizer:
         xi: exploration bonus of expected improvement.
         cost_scale: cold-start multiplier for predicted runtimes (see
             :class:`~arenaml.surrogate.LinearCostSurrogate`).
-        log_cost: model runtimes in log space.
+        log_cost: model runtimes in log space instead of raw seconds (see
+            :class:`~arenaml.surrogate.LinearCostSurrogate`; off by default).
         fit_intercept: intercept for the performance surrogate (thesis default: none).
         budget_margin: a candidate is only eligible if ``pred_cost <= budget_margin * remaining``.
         seed: random seed used to break ties.
@@ -54,7 +55,7 @@ class Optimizer:
         cost_alpha: float = 1.0,
         xi: float = 0.0,
         cost_scale: float = 1.0,
-        log_cost: bool = True,
+        log_cost: bool = False,
         fit_intercept: bool = False,
         budget_margin: float = 1.0,
         seed: int | None = 0,

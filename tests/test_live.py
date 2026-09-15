@@ -65,10 +65,10 @@ def test_search_binary(lb, tmp_path):
     assert s.predictions().shape[0] == len(s.candidates_)
     weights = s.task_weights()
     assert weights.shape[0] == 51 and np.isfinite(weights["performance"]).all()
-    assert s.optimizer_.cost.log_space  # log_cost defaults to True
+    assert not s.optimizer_.cost.log_space  # log_cost defaults to False
 
 
-def test_search_log_cost_off(lb, tmp_path):
+def test_search_log_cost_on(lb, tmp_path):
     X, y = load_breast_cancer(return_X_y=True, as_frame=True)
     s = arenaml.search(
         X,
@@ -78,11 +78,11 @@ def test_search_log_cost_off(lb, tmp_path):
         leaderboard=lb,
         models=["LightGBM"],
         cv=CVStrategy("holdout"),
-        log_cost=False,
+        log_cost=True,
         output_dir=tmp_path,
         verbosity=0,
     )
-    assert not s.optimizer_.cost.log_space
+    assert s.optimizer_.cost.log_space
     assert (s.predictions()["pred_cost"] > 0).all()
 
 

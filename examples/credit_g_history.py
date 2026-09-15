@@ -38,7 +38,6 @@ def run() -> arenaml.ArenaSearch:
         time_budget=300,
         models=METHODS,
         cv=CVStrategy("holdout", holdout_frac=0.25),
-        log_cost=False,  # raw-seconds runtime surrogate for EI/cost, instead of the log-space default
         output_dir=OUT / "runs",
         verbosity=1,
     )

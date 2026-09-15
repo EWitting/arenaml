@@ -58,11 +58,14 @@ class ArenaSearch:
             type (``roc_auc``, ``log_loss``, ``rmse``).
         cost_alpha: exponent of the runtime penalty in the acquisition (``1``: EI per second,
             ``0``: plain EI).
-        log_cost: model the runtime surrogate on ``log(seconds)`` (default) instead of raw
-            seconds. Log space is usually more accurate since runtimes span orders of
-            magnitude across configurations, and it makes the cold-start estimate a geometric
-            rather than an arithmetic mean over tasks; set ``False`` to use raw seconds and an
-            arithmetic mean instead.
+        log_cost: model the runtime surrogate on ``log(seconds)`` instead of raw seconds.
+            Off by default (raw seconds, arithmetic-mean cold start): a plain linear fit is
+            an unbiased estimate of expected cost, matching what the cost-cooled acquisition
+            (EI divided by predicted cost) is meant to divide by, and empirically gives a
+            better regret curve than the log-space (geometric-mean) alternative, which
+            tends to understate the cost of high-variance configurations. Set ``True`` to
+            model log runtime instead, e.g. if your candidates span many more orders of
+            magnitude in cost than TabArena's did.
         xi: exploration bonus of expected improvement.
         source_tasks: ``"all"`` uses every TabArena task as a feature, ``"same_type"`` only the
             tasks with the target's problem type.
@@ -98,7 +101,7 @@ class ArenaSearch:
         cv: CVStrategy | None = None,
         eval_metric: str | None = None,
         cost_alpha: float = 1.0,
-        log_cost: bool = True,
+        log_cost: bool = False,
         xi: float = 0.0,
         source_tasks: Literal["all", "same_type"] = "all",
         include_gpu_models: bool | None = None,

@@ -10,10 +10,11 @@ Before enough target observations exist the weights are uniform (``1 / n_tasks``
 prediction of a configuration is simply its average over the benchmark tasks, and the
 spread of its scores across tasks serves as the predictive uncertainty.
 
-The runtime surrogate is the same model applied to the runtime matrix.  By default runtimes
-are modelled in log space (runtimes span several orders of magnitude across tasks), so the
-cold-start estimate is the geometric mean over tasks; ``log_space=False`` gives the
-arithmetic mean instead.
+The runtime surrogate is the same model applied to the runtime matrix.  By default it is
+fitted on raw seconds, giving an (arithmetic-mean) unbiased estimate of expected cost for
+the cost-cooled acquisition; pass ``log_space=True`` to fit ``log(cost)`` instead (a
+geometric-mean cold start), which can help when runtimes span many orders of magnitude but
+tends to understate the cost of high-variance configurations.
 """
 
 from __future__ import annotations
@@ -116,12 +117,16 @@ class LinearPerfSurrogate:
 
 
 class LinearCostSurrogate:
-    """Runtime surrogate: :class:`LinearPerfSurrogate` on (log) runtimes.
+    """Runtime surrogate: :class:`LinearPerfSurrogate` on runtimes (raw seconds by default).
 
     Args:
         cost: ``(n_candidates, n_tasks)`` runtimes in seconds, NaN allowed (imputed by the
             per-task median).
-        log_space: model ``log(cost)`` instead of ``cost``.
+        log_space: model ``log(cost)`` instead of raw ``cost``. Off by default: a plain
+            linear fit gives an unbiased estimate of expected cost, which is what the
+            cost-cooled acquisition (EI divided by predicted cost) is meant to use; log-space
+            fitting instead recovers something closer to the median runtime once exponentiated
+            back, understating cost for right-skewed runtime distributions.
         scale: multiplicative prior correction applied to cold-start estimates, e.g. the number
             of model fits of the user's CV protocol relative to TabArena's 8-fold bagging.
         fit_intercept: intercept for the linear model (default on, it absorbs a constant
@@ -131,7 +136,7 @@ class LinearCostSurrogate:
     def __init__(
         self,
         cost: np.ndarray,
-        log_space: bool = True,
+        log_space: bool = False,
         scale: float = 1.0,
         fit_intercept: bool = True,
         min_observations: int = 2,

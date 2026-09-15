@@ -26,11 +26,12 @@ configuration on the leaderboard. What differs from standard HPO is the surrogat
   the target dataset, learning one weight per benchmark task that relates it to the target.
   The model then predicts a score distribution for every remaining candidate.
 * **Runtime prediction with the same trick.** The same matrix is built from the benchmark
-  train + inference times and the same Bayesian linear regression (on log runtime) predicts
-  how long every candidate will take on your machine and data.
+  train + inference times and the same Bayesian linear regression predicts how long every
+  candidate will take on your machine and data (raw seconds by default, an unbiased estimate
+  of expected cost for the acquisition below; `log_cost=True` fits `log(seconds)` instead).
 * **Cold start with uniform weights.** Before any candidate has been run, all task weights
-  are `1 / n_tasks`, so the estimated score of a candidate is its average over the benchmark
-  tasks and the estimated runtime is its (geometric) average runtime.
+  are `1 / n_tasks`, so the estimated score and estimated runtime of a candidate are both
+  simply its average over the benchmark tasks.
 * **Acquisition: expected improvement per second.** Candidates are ranked by expected
   improvement over the best score observed so far divided by the predicted runtime
   (`cost_alpha=1`), and candidates that do not fit in the remaining budget are skipped.
@@ -96,7 +97,7 @@ search.predict(X_test); search.predict_proba(X_test)
 ```
 
 `arenaml.search(...)` is `ArenaSearch(**kwargs).fit(X, y)`; see the `ArenaSearch` docstring
-for all options (`cost_alpha`, `xi`, `source_tasks="same_type"`, `max_evals`,
+for all options (`cost_alpha`, `log_cost`, `xi`, `source_tasks="same_type"`, `max_evals`,
 `max_eval_time`, `num_cpus`, `num_gpus`, `output_dir`, ...).
 
 Lower-level pieces are available too:
@@ -115,7 +116,10 @@ res.metric_error_val, res.seconds, res.predictor
 
 * Runtimes on the leaderboard were measured on TabArena's hardware with 8-fold bagging. The
   cold-start runtime estimate is rescaled by the number of fits of your CV strategy, and the
-  runtime surrogate adapts to your machine after the first two evaluations.
+  runtime surrogate adapts to your machine after the first two evaluations. It fits raw
+  seconds by default (`log_cost=False`); pass `log_cost=True` if your candidate set spans
+  much wider runtime ranges than TabArena's and the arithmetic-mean cold start dominated by
+  a few slow outliers is a problem for you.
 * Benchmark scores use TabArena's `metric_error` on the test folds by default
   (`score_column="val"` switches to the out-of-fold validation error). If you pass a custom
   `eval_metric`, the target is optimised for it while the benchmark columns stay on
