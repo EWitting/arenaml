@@ -47,10 +47,6 @@ configuration on the leaderboard. What differs from standard HPO is the surrogat
   TabArena's dataset size constraints reject the target (TabPFNv2 above 10k rows), when they
   need a GPU that is not available, or when their optional dependencies are not installed.
 
-This is the "Linear-Perf" method of the thesis *Simple Meta-Learning for HPO and CASH Using
-Performance Representations*, packaged for real use: the whole TabArena leaderboard is the
-meta-dataset and the models are actually trained on your data.
-
 ## Installation
 
 TabArena is not on PyPI, so install it (and through it AutoGluon) first:

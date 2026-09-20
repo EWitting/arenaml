@@ -39,7 +39,7 @@ get"), then scored on the common held-out test set with the same scorer. Regret 
 relative to *one shared reference*, the best test error observed by either system at any budget
 in this experiment (the true optimum on a fresh dataset is unknowable, so this is the usual
 "best observed" proxy, exactly as ``compute_normalized_regret`` uses ``max(ground_truth)`` in
-the thesis code) -- every point in the regret plot subtracts that same number.
+the reference code) -- every point in the regret plot subtracts that same number.
 
 Outputs (under ``examples/output/``): ``adult_vs_autogluon.csv`` (one row per method x budget)
 and ``adult_vs_autogluon.png`` (error and regret vs. budget).
